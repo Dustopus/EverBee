@@ -24,10 +24,13 @@
         android:id="@+id/chipGroupCategories"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
         android:paddingHorizontal="12dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:background="?attr/colorSurface"
         android:visibility="gone"
-        app:singleSelection="true" />
+        app:singleSelection="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefresh"
