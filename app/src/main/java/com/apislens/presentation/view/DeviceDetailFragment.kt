@@ -142,17 +142,25 @@ class DeviceDetailFragment : Fragment() {
             return
         }
 
-        val entries = records.mapIndexed { index, r ->
-            Entry(index.toFloat(), r.endLevel?.toFloat() ?: r.startLevel.toFloat())
+        // 使用 CostCalculator 计算电池健康度
+        val healthData = CostCalculator.calculateBatteryHealth(records)
+        if (healthData.isEmpty()) {
+            binding.chartBattery.clear()
+            binding.chartBattery.setNoDataText("暂无充电记录")
+            return
         }
-        val sdf = SimpleDateFormat("MM/dd", Locale.CHINA)
-        val labels = records.map { sdf.format(Date(it.startTime)) }
+
+        val entries = healthData.mapIndexed { index, (_, health) ->
+            Entry(index.toFloat(), health.toFloat())
+        }
+        val labels = healthData.map { it.first }
 
         val colorPrimary = getThemeColor(com.google.android.material.R.attr.colorPrimary)
-        val dataSet = LineDataSet(entries, "电量 %").apply {
+        val colorError = getThemeColor(com.google.android.material.R.attr.colorError)
+        val dataSet = LineDataSet(entries, "电池健康度 %").apply {
             this.color = colorPrimary
             setCircleColor(colorPrimary)
-            lineWidth = 2f
+            lineWidth = 2.5f
             circleRadius = 3f
             setDrawCircleHole(false)
             setDrawValues(false)
@@ -160,6 +168,15 @@ class DeviceDetailFragment : Fragment() {
             setDrawFilled(true)
             fillColor = colorPrimary
             fillAlpha = 30
+        }
+
+        // 添加 80% 健康度参考线
+        val limitLine = com.github.mikephil.charting.components.LimitLine(80f, "健康阈值").apply {
+            lineColor = colorError
+            lineWidth = 1f
+            enableDashedLine(10f, 10f, 0f)
+            labelPosition = com.github.mikephil.charting.components.LimitLine.LimitLabelPosition.RIGHT_TOP
+            textSize = 10f
         }
 
         binding.chartBattery.apply {
@@ -176,9 +193,10 @@ class DeviceDetailFragment : Fragment() {
             }
             axisLeft.apply {
                 axisMinimum = 0f
-                axisMaximum = 100f
+                axisMaximum = 105f
                 setDrawGridLines(true)
                 gridColor = Color.parseColor("#1A000000")
+                addLimitLine(limitLine)
             }
             axisRight.isEnabled = false
             setTouchEnabled(true)

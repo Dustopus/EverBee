@@ -9,6 +9,60 @@ import java.time.temporal.ChronoUnit
 object CostCalculator {
 
     /**
+     * 计算电池健康度。
+     *
+     * 使用加权方法评估电池状态：
+     * 1. 充满电的比例（能充到 100% 的次数占总次数）
+     * 2. 充电效率（平均每次充入的电量百分比）
+     * 3. 滑动窗口衰减检测（近期 vs 早期的充到最高值对比）
+     *
+     * 返回 0-100 的健康百分比。
+     */
+    fun calculateBatteryHealth(records: List<com.apislens.data.local.entity.ChargeRecord>): List<Pair<String, Double>> {
+        if (records.isEmpty()) return emptyList()
+
+        val sdf = java.text.SimpleDateFormat("MM/dd", java.util.Locale.CHINA)
+        val results = mutableListOf<Pair<String, Double>>()
+
+        // 累积计算
+        var totalCycles = 0.0  // 累积完整充电周期数
+        var fullChargeCount = 0  // 充到 >=95% 的次数
+        var totalChargeGained = 0.0  // 累积充入电量
+        val windowSize = 5  // 滑动窗口大小
+        val maxLevels = java.util.ArrayDeque<Double>()  // 近期充到的最高电量
+
+        for ((index, record) in records.withIndex()) {
+            val endLvl = record.endLevel?.toDouble() ?: record.startLevel.toDouble()
+            val chargeGained = endLvl - record.startLevel
+            if (chargeGained > 0) {
+                totalChargeGained += chargeGained
+                totalCycles += chargeGained / 100.0
+            }
+            if (endLvl >= 95) fullChargeCount++
+
+            maxLevels.addLast(endLvl)
+            if (maxLevels.size > windowSize) maxLevels.removeFirst()
+
+            // 健康度计算
+            val fullChargeRatio = if (index + 1 > 0) fullChargeCount.toDouble() / (index + 1) else 1.0
+            val recentMaxAvg = maxLevels.average()
+            val healthScore = (fullChargeRatio * 40.0) + (recentMaxAvg * 0.6)
+            val clampedHealth = healthScore.coerceIn(0.0, 100.0)
+
+            results.add(sdf.format(java.util.Date(record.startTime)) to clampedHealth)
+        }
+
+        return results
+    }
+
+    /** 是否需要充电提醒 */
+    fun needsChargeReminder(lastChargeTime: Long?): Boolean {
+        if (lastChargeTime == null) return true
+        val daysSinceCharge = (System.currentTimeMillis() - lastChargeTime) / 86400000.0
+        return daysSinceCharge >= 7
+    }
+
+    /**
      * 计算每日折旧成本。
      *
      * @param purchasePriceCents 购买价格（分）
