@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ApisLens</string>
+
+    <!-- Navigation -->
+    <string name="nav_devices">设备</string>
+    <string name="nav_dashboard">看板</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- Device -->
+    <string name="device_empty_title">还没有设备</string>
+    <string name="device_empty_subtitle">点击 + 添加你的第一台设备</string>
+    <string name="device_add">添加设备</string>
+    <string name="device_edit">编辑设备</string>
+    <string name="device_delete">删除此设备</string>
+    <string name="device_delete_confirm">确定删除此设备及其所有记录？此操作不可恢复。</string>
+    <string name="device_name_hint">设备名称 *</string>
+    <string name="device_model_hint">设备型号</string>
+    <string name="device_price_hint">购买价格 (元) *</string>
+    <string name="device_date_hint">购买日期 *</string>
+    <string name="device_note_hint">备注</string>
+    <string name="device_daily_cost">元/天</string>
+    <string name="device_days_used">已使用 %d 天</string>
+    <string name="device_purchase_price">购入 ¥%s</string>
+
+    <!-- Charge -->
+    <string name="charge_add">记录充电</string>
+    <string name="charge_start_time">充电开始时间</string>
+    <string name="charge_end_time">充电结束时间</string>
+    <string name="charge_start_level">开始电量</string>
+    <string name="charge_end_level">结束电量</string>
+    <string name="charge_note_hint">备注（如快充/慢充）</string>
+    <string name="charge_save">保存充电记录</string>
+
+    <!-- Usage -->
+    <string name="usage_add">记录使用时长</string>
+    <string name="usage_date">日期</string>
+    <string name="usage_hours">小时</string>
+    <string name="usage_minutes">分钟</string>
+    <string name="usage_save">保存使用记录</string>
+
+    <!-- Charts -->
+    <string name="chart_battery_health">电池健康</string>
+    <string name="chart_usage_time">使用时长</string>
+    <string name="chart_charge_habits">充电习惯</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">成本看板</string>
+    <string name="dashboard_total_investment">总投入</string>
+    <string name="dashboard_daily_cost">日均总成本</string>
+    <string name="dashboard_device_count">设备数量</string>
+    <string name="dashboard_empty">添加设备后查看成本分析</string>
+    <string name="dashboard_device_detail">各设备成本明细</string>
+
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+    <string name="settings_export">导出数据</string>
+    <string name="settings_import">导入数据</string>
+    <string name="settings_export_desc">导出为 JSON 文件，可随时导入恢复</string>
+    <string name="settings_about">关于 ApisLens</string>
+    <string name="settings_version">版本 %s</string>
+    <string name="settings_license">开源协议：AGPL-3.0</string>
+
+    <!-- Common -->
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="confirm">确认</string>
+    <string name="delete">删除</string>
+    <string name="quick_actions">快速操作</string>
+
+    <!-- Export/Import -->
+    <string name="export_success">导出成功！%d 台设备，%d 条充电记录，%d 条使用记录</string>
+    <string name="export_failed">导出失败：%s</string>
+    <string name="import_success">导入成功！%d 台设备，%d 条充电记录，%d 条使用记录</string>
+    <string name="import_failed">导入失败：%s</string>
+    <string name="export_file_name">apislens_backup_%s.json</string>
+
+    <!-- Errors -->
+    <string name="error_name_required">请输入设备名称</string>
+    <string name="error_date_required">请选择购买日期</string>
+    <string name="error_price_invalid">请输入有效价格</string>
+    <string name="error_price_zero">价格必须大于0</string>
+    <string name="error_time_order">结束时间必须晚于开始时间</string>
+    <string name="error_level_order">结束电量不能低于开始电量</string>
+    <string name="error_duration_zero">使用时长必须大于0</string>
+    <string name="error_date_required_usage">请选择日期</string>
+</resources>

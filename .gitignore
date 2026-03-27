@@ -1,0 +1,29 @@
+# Built outputs
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# App build
+/app/build/
+/app/release/
+
+# Signing
+*.jks
+*.keystore
+signing.properties
+
+# Generated
+*.ap_
+*.apk
+*.aab
+*.dex
+
+# Logs
+*.log

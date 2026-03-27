@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base theme: Material 3 DayNight -->
+    <style name="Theme.ApisLens" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Honey Gold palette — used on devices without dynamic color -->
+        <item name="colorPrimary">@color/apislens_primary</item>
+        <item name="colorOnPrimary">@color/apislens_on_primary</item>
+        <item name="colorPrimaryContainer">@color/apislens_primary_container</item>
+        <item name="colorOnPrimaryContainer">#3E2723</item>
+        <item name="colorSecondary">@color/apislens_secondary</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#D7CCC8</item>
+        <item name="colorOnSecondaryContainer">#3E2723</item>
+        <item name="colorError">@color/apislens_error</item>
+        <item name="colorOnError">#FFFFFF</item>
+        <item name="colorSurface">@color/apislens_surface</item>
+        <item name="colorOnSurface">@color/apislens_on_surface</item>
+        <item name="colorSurfaceVariant">#F5F0EB</item>
+        <item name="colorOnSurfaceVariant">#49454F</item>
+        <item name="colorSurfaceContainerLow">#FAFAFA</item>
+        <item name="colorOutline">#79747E</item>
+        <item name="colorOutlineVariant">#CAC4D0</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="FabShape" parent="">
+        <item name="cornerSize">16dp</item>
+    </style>
+
+</resources>

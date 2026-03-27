@@ -1,0 +1,4 @@
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/apislens_on_primary">
+    <item android:drawable="@drawable/bg_fab" />
+</ripple>
