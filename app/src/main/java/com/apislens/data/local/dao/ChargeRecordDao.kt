@@ -49,4 +49,20 @@ interface ChargeRecordDao {
 
     @Query("SELECT * FROM charge_records WHERE device_id = :deviceId")
     suspend fun getRecordsByDeviceOnce(deviceId: Long): List<ChargeRecord>
+
+    @Query("SELECT * FROM charge_records ORDER BY start_time DESC LIMIT 1")
+    suspend fun getLatestChargeRecord(): ChargeRecord?
+
+    @RewriteQueriesToDropUnusedColumns
+    @Query("SELECT device_id FROM charge_records GROUP BY device_id ORDER BY MAX(start_time) ASC LIMIT 1")
+    suspend fun getLongestUnchargedDeviceId(): Long?
+
+    @Query("SELECT * FROM charge_records ORDER BY start_time DESC")
+    fun getAllChargeRecords(): Flow<List<ChargeRecord>>
+
+    @Query("SELECT start_time FROM charge_records WHERE device_id = :deviceId ORDER BY start_time DESC LIMIT 1")
+    suspend fun getLatestChargeTimeByDevice(deviceId: Long): Long?
+
+    @Query("SELECT start_time FROM charge_records WHERE device_id = :deviceId AND end_level IS NOT NULL AND (end_level - start_level) >= 20 ORDER BY start_time DESC LIMIT 1")
+    suspend fun getLatestValidChargeTimeByDevice(deviceId: Long): Long?
 }

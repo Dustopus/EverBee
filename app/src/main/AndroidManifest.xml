@@ -5,7 +5,6 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".ApisLensApp"
@@ -17,15 +16,15 @@
         android:theme="@style/Theme.ApisLens">
 
         <activity
-            android:name=".presentation.view.MainActivity"
-            android:exported="true">
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.ApisLens">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- 禁用默认 WorkManager 初始化，使用 Hilt 注入 -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

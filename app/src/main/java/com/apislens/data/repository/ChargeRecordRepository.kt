@@ -33,4 +33,19 @@ class ChargeRecordRepository @Inject constructor(
 
     suspend fun getChargeCountByDevice(deviceId: Long): Int =
         chargeRecordDao.getChargeCountByDevice(deviceId)
+
+    suspend fun getLatestChargeRecord(): ChargeRecord? =
+        chargeRecordDao.getLatestChargeRecord()
+
+    suspend fun getLongestUnchargedDeviceId(): Long? =
+        chargeRecordDao.getLongestUnchargedDeviceId()
+
+    fun getAllChargeRecords(): Flow<List<ChargeRecord>> =
+        chargeRecordDao.getAllChargeRecords()
+
+    suspend fun getLatestChargeTimeByDevice(deviceId: Long): Long? =
+        chargeRecordDao.getLatestChargeTimeByDevice(deviceId)
+
+    suspend fun getLatestValidChargeTimeByDevice(deviceId: Long): Long? =
+        chargeRecordDao.getLatestValidChargeTimeByDevice(deviceId)
 }

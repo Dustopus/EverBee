@@ -1,11 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="apislens_primary">#FFC107</color>        <!-- Honey Gold -->
-    <color name="apislens_primary_container">#FFF8E1</color>
-    <color name="apislens_on_primary">#000000</color>
-    <color name="apislens_secondary">#795548</color>     <!-- Warm Brown -->
-    <color name="apislens_background">#FAFAFA</color>
-    <color name="apislens_surface">#FFFFFF</color>
-    <color name="apislens_error">#D32F2F</color>
-    <color name="apislens_on_surface">#212121</color>
+    <color name="primary">#FF6600</color>
+    <color name="primary_dark">#CC5200</color>
+    <color name="secondary">#6B75FF</color>
+    <color name="background">#1A1716</color>
+    <color name="surface">#141218</color>
+    <color name="error">#FF546A</color>
+    <color name="success">#689F68</color>
+    <color name="warning">#FFBF00</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="gray_dark">#333333</color>
+    <color name="gray">#666666</color>
+    
+    <!-- ApisLens specific colors -->
+    <color name="apislens_primary">#FF6600</color>
+    <color name="apislens_on_primary">#FFFFFF</color>
+    <color name="apislens_secondary">#6B75FF</color>
+    <color name="apislens_background">#1A1716</color>
+    <color name="apislens_surface">#141218</color>
 </resources>
