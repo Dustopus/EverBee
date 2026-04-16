@@ -2,9 +2,7 @@ package com.apislens.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,8 +15,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -34,7 +32,7 @@ private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
 
-data class GithubHeatmapCell(
+private data class VerticalHeatmapCell(
     val dateKey: String,
     val count: Int,
     val dayOfWeek: Int,
@@ -42,15 +40,39 @@ data class GithubHeatmapCell(
     val month: Int
 )
 
+@Composable
+private fun HeatmapColorBadge(
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        shape = MaterialTheme.shapes.extraSmall
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Surface(
+                modifier = Modifier.size(16.dp),
+                shape = MaterialTheme.shapes.extraSmall,
+                color = color
+            ) {}
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GithubStyleHeatmap(
+fun VerticalHeatmap(
     dayCounts: Map<String, Int>,
     year: Int,
     onYearChange: (Int) -> Unit,
     dayRecords: Map<String, List<ChargeRecord>> = emptyMap(),
-    cellSize: Dp = 12.dp,
-    cellGap: Dp = 2.dp,
     modifier: Modifier = Modifier
 ) {
     var showInfoSheet by remember { mutableStateOf(false) }
@@ -65,7 +87,7 @@ fun GithubStyleHeatmap(
 
     val sdfDay = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     val cells = remember(dayCounts, year) {
-        val result = mutableListOf<GithubHeatmapCell>()
+        val result = mutableListOf<VerticalHeatmapCell>()
         for (i in 0 until totalDays) {
             val dayCal = Calendar.getInstance()
             dayCal.set(year, Calendar.JANUARY, 1)
@@ -74,7 +96,7 @@ fun GithubStyleHeatmap(
             val dow = (dayCal.get(Calendar.DAY_OF_WEEK) + 5) % 7
             val weekIdx = (firstDayOfWeek + i) / 7
             val month = dayCal.get(Calendar.MONTH)
-            result.add(GithubHeatmapCell(
+            result.add(VerticalHeatmapCell(
                 dateKey = dateKey,
                 count = dayCounts[dateKey] ?: 0,
                 dayOfWeek = dow,
@@ -86,7 +108,7 @@ fun GithubStyleHeatmap(
     }
 
     val cellMap = remember(cells) {
-        val map = mutableMapOf<Pair<Int, Int>, GithubHeatmapCell>()
+        val map = mutableMapOf<Pair<Int, Int>, VerticalHeatmapCell>()
         for (cell in cells) {
             map[Pair(cell.dayOfWeek, cell.weekIndex)] = cell
         }
@@ -95,38 +117,33 @@ fun GithubStyleHeatmap(
 
     val maxCount = cells.maxOfOrNull { it.count }?.coerceAtLeast(1) ?: 1
     val monthLabels = listOf("1 月", "2 月", "3 月", "4 月", "5 月", "6 月", "7 月", "8 月", "9 月", "10 月", "11 月", "12 月")
-    val weekLabels = listOf("一", "", "三", "", "五", "", "日")
+    val weekLabels = listOf("1", "2", "3", "4", "5", "6", "7")
 
-    val weekToMonth = remember(cells) {
+    val monthStartWeeks = remember(cells) {
         val map = mutableMapOf<Int, Int>()
         for (cell in cells) {
-            if (!map.containsKey(cell.weekIndex)) {
-                map[cell.weekIndex] = cell.month
+            if (!map.containsKey(cell.month)) {
+                map[cell.month] = cell.weekIndex
             }
         }
         map
     }
 
     val density = LocalDensity.current
-    val configuration = LocalConfiguration.current
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val cardPaddingPx = with(density) { 12.dp.toPx() }
-    val cardInnerPaddingPx = with(density) { 24.dp.toPx() }
-    val marginRatio = 0.03f
-    val availableWidthPx = screenWidthPx - 2 * cardPaddingPx - 2 * cardInnerPaddingPx - screenWidthPx * marginRatio
-
-    val weekLabelWidthPx = with(density) { 20.dp.toPx() }
-    val gridStartXOffset = with(density) { 6.dp.toPx() }
-    val gapPx = with(density) { cellGap.toPx() }
-    val availableGridWidthPx = availableWidthPx - weekLabelWidthPx - gridStartXOffset
-    val adaptedCellPx = (availableGridWidthPx / totalWeeks - gapPx).coerceAtLeast(2f)
-    val adaptedGapPx = if (adaptedCellPx < with(density) { 4.dp.toPx() }) 1f else gapPx
-    val finalCellPx = ((availableGridWidthPx / totalWeeks - adaptedGapPx) * 1.2f).coerceAtLeast(2f)
-
-    val monthLabelHeightPx = with(density) { 14.dp.toPx() }
-    val gridHeightPx = 7 * finalCellPx + 6 * adaptedGapPx
-    val totalContentHeightPx = monthLabelHeightPx + with(density) { 2.dp.toPx() } + gridHeightPx
-    val totalContentHeightDp = with(density) { totalContentHeightPx.toDp() }
+    val monthLabelWidthPx = with(density) { 28.dp.toPx() }
+    val gapPx = with(density) { 2.dp.toPx() }
+    val cellSizePx = with(density) { 10.dp.toPx() }
+    val weekLabelHeightPx = with(density) { 16.dp.toPx() }
+    val gridStartYOffset = with(density) { 4.dp.toPx() }
+    
+    val availableHeightPx = totalWeeks * (cellSizePx + gapPx) - gapPx
+    val availableWidthPx = 7 * (cellSizePx + gapPx) - gapPx
+    
+    val totalWidthPx = monthLabelWidthPx + with(density) { 8.dp.toPx() } + availableWidthPx
+    val totalHeightPx = weekLabelHeightPx + with(density) { 8.dp.toPx() } + availableHeightPx
+    
+    val totalWidthDp = with(density) { totalWidthPx.toDp() }
+    val totalHeightDp = with(density) { totalHeightPx.toDp() }
 
     val colorEmpty = MaterialTheme.colorScheme.surfaceContainerHighest
     val colorLow = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
@@ -135,7 +152,7 @@ fun GithubStyleHeatmap(
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         shape = MaterialTheme.shapes.medium
     ) {
@@ -174,19 +191,19 @@ fun GithubStyleHeatmap(
 
             Canvas(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(totalContentHeightDp)
-                    .pointerInput(cellMap, finalCellPx, adaptedGapPx, weekLabelWidthPx, monthLabelHeightPx, totalWeeks, gridStartXOffset) {
+                    .width(totalWidthDp)
+                    .height(totalHeightDp)
+                    .pointerInput(cellMap, cellSizePx, gapPx, monthLabelWidthPx, weekLabelHeightPx, totalWeeks) {
                         detectTapGestures { offset ->
-                            val gridStartX = weekLabelWidthPx + gridStartXOffset
-                            val gridStartY = monthLabelHeightPx + with(density) { 2.dp.toPx() }
+                            val gridStartX = monthLabelWidthPx + with(density) { 8.dp.toPx() }
+                            val gridStartY = weekLabelHeightPx + with(density) { 8.dp.toPx() }
                             val relX = offset.x - gridStartX
                             val relY = offset.y - gridStartY
                             if (relX >= 0 && relY >= 0) {
-                                val w = (relX / (finalCellPx + adaptedGapPx)).toInt()
-                                val dow = (relY / (finalCellPx + adaptedGapPx)).toInt()
-                                if (w in 0 until totalWeeks && dow in 0 until 7) {
-                                    val cell = cellMap[Pair(dow, w)]
+                                val dayOfWeekIdx = (relX / (cellSizePx + gapPx)).toInt()
+                                val weekIdx = (relY / (cellSizePx + gapPx)).toInt()
+                                if (dayOfWeekIdx in 0 until 7 && weekIdx in 0 until totalWeeks) {
+                                    val cell = cellMap[Pair(dayOfWeekIdx, weekIdx)]
                                     if (cell != null) {
                                         selectedDate = cell.dateKey
                                     }
@@ -196,47 +213,42 @@ fun GithubStyleHeatmap(
                     }
             ) {
                 val textPaint = android.graphics.Paint().apply {
-                    textSize = with(density) { 8.sp.toPx() }
+                    textSize = with(density) { 9.sp.toPx() }
                     isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.RIGHT
                 }
-                val monthTextPaint = android.graphics.Paint().apply {
-                    textSize = with(density) { 8.sp.toPx() }
+                val weekTextPaint = android.graphics.Paint().apply {
+                    textSize = with(density) { 9.sp.toPx() }
                     isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
                 }
 
-                val gridStartY = monthLabelHeightPx + with(density) { 2.dp.toPx() }
+                val gridStartX = monthLabelWidthPx + with(density) { 8.dp.toPx() }
+                val gridStartY = weekLabelHeightPx + with(density) { 8.dp.toPx() }
 
-                textPaint.color = labelColor.hashCode()
+                textPaint.color = labelColor.toArgb()
+                for ((month, weekIdx) in monthStartWeeks) {
+                    val y = gridStartY + weekIdx * (cellSizePx + gapPx) + cellSizePx / 2
+                    drawContext.canvas.nativeCanvas.drawText(
+                        monthLabels[month],
+                        monthLabelWidthPx - with(density) { 4.dp.toPx() },
+                        y + with(density) { 3.sp.toPx() },
+                        textPaint
+                    )
+                }
+
+                weekTextPaint.color = labelColor.toArgb()
                 for (i in weekLabels.indices) {
-                    val label = weekLabels[i]
-                    if (label.isNotEmpty()) {
-                        val y = gridStartY + i * (finalCellPx + adaptedGapPx) + finalCellPx / 2
-                        drawContext.canvas.nativeCanvas.drawText(
-                            label,
-                            weekLabelWidthPx - with(density) { 4.dp.toPx() },
-                            y + with(density) { 3.sp.toPx() },
-                            textPaint
-                        )
-                    }
+                    val x = gridStartX + i * (cellSizePx + gapPx) + cellSizePx / 2
+                    drawContext.canvas.nativeCanvas.drawText(
+                        weekLabels[i],
+                        x,
+                        with(density) { 11.sp.toPx() },
+                        weekTextPaint
+                    )
                 }
 
-                monthTextPaint.color = labelColor.hashCode()
-                var lastMonth = -1
-                for (w in 0 until totalWeeks) {
-                    val m = weekToMonth[w] ?: continue
-                    if (m != lastMonth) {
-                        val x = weekLabelWidthPx + gridStartXOffset + w * (finalCellPx + adaptedGapPx)
-                        drawContext.canvas.nativeCanvas.drawText(
-                            monthLabels[m],
-                            x,
-                            with(density) { 10.sp.toPx() },
-                            monthTextPaint
-                        )
-                        lastMonth = m
-                    }
-                }
-
-                val cornerRadius = CornerRadius(with(density) { 1.dp.toPx() }.coerceAtMost(finalCellPx * 0.2f))
+                val cornerRadius = CornerRadius(with(density) { 1.dp.toPx() }.coerceAtMost(cellSizePx * 0.2f))
                 for (cell in cells) {
                     val intensity = (cell.count.toFloat() / maxCount.toFloat()).coerceIn(0f, 1f)
                     val color = when {
@@ -245,12 +257,12 @@ fun GithubStyleHeatmap(
                         intensity < 0.66f -> colorMid
                         else -> colorHigh
                     }
-                    val x = weekLabelWidthPx + gridStartXOffset + cell.weekIndex * (finalCellPx + adaptedGapPx)
-                    val y = gridStartY + cell.dayOfWeek * (finalCellPx + adaptedGapPx)
+                    val x = gridStartX + cell.dayOfWeek * (cellSizePx + gapPx)
+                    val y = gridStartY + cell.weekIndex * (cellSizePx + gapPx)
                     drawRoundRect(
                         color = color,
                         topLeft = Offset(x, y),
-                        size = Size(finalCellPx, finalCellPx),
+                        size = Size(cellSizePx, cellSizePx),
                         cornerRadius = cornerRadius
                     )
                 }
@@ -332,9 +344,10 @@ fun GithubStyleHeatmap(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("• 纵轴（Y轴）：星期一至星期日", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("• 横轴（X轴）：按周排列，标注月份", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("• 每个方块代表一天，颜色深浅代表充电次数", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("• 纵轴（Y 轴）：第 1 周至第 53 周（按年份）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("• 横轴（X 轴）：星期 1 至 7（周一至周日）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("• 每个方块代表一年中的某一天", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("• 左侧月份标签标识每月起始位置", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -385,32 +398,6 @@ fun GithubStyleHeatmap(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun HeatmapColorBadge(
-    label: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        shape = MaterialTheme.shapes.extraSmall
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Surface(
-                modifier = Modifier.size(16.dp),
-                shape = MaterialTheme.shapes.extraSmall,
-                color = color
-            ) {}
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

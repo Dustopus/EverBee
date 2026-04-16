@@ -31,8 +31,8 @@ import androidx.room.ColumnInfo
     ]
 )
 data class UsageRecord(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+    @PrimaryKey
+    val id: Long,
 
     /** 关联设备 ID */
     @ColumnInfo(name = "device_id")

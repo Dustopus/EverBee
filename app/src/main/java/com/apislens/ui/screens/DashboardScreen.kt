@@ -25,7 +25,6 @@ import com.apislens.ui.theme.SuccessGreen
 import com.apislens.ui.theme.WarningAmber
 import com.apislens.ui.viewmodel.DashboardStats
 import com.apislens.ui.viewmodel.DashboardViewModel
-import com.apislens.ui.viewmodel.ChargeHeatmapData
 import com.apislens.rust.RustCore
 import java.text.SimpleDateFormat
 import java.util.*
@@ -40,8 +39,7 @@ fun DashboardScreen(
 ) {
     val devices by viewModel.devices.collectAsStateWithLifecycle(initialValue = emptyList())
     val stats by viewModel.stats.collectAsStateWithLifecycle(initialValue = DashboardStats())
-    val heatmapData by viewModel.heatmapData.collectAsStateWithLifecycle(initialValue = emptyList())
-    val heatmapYear by viewModel.heatmapYear.collectAsStateWithLifecycle(initialValue = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR))
+    val pieChartData by viewModel.pieChartData.collectAsStateWithLifecycle(initialValue = emptyList())
 
     Scaffold(
         topBar = {
@@ -94,14 +92,9 @@ fun DashboardScreen(
                 )
             }
 
-            if (heatmapData.isNotEmpty()) {
+            if (pieChartData.isNotEmpty()) {
                 item {
-                    val dayCounts = heatmapData.associate { it.date to it.count }
-                    com.apislens.ui.components.GithubStyleHeatmap(
-                        dayCounts = dayCounts,
-                        year = heatmapYear,
-                        onYearChange = { viewModel.setHeatmapYear(it) }
-                    )
+                    com.apislens.ui.components.CostPieChart(data = pieChartData)
                 }
             }
 
@@ -180,26 +173,26 @@ fun DailyCostHeroCard(totalDailyCost: Double, averageDailyCost: Double) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Column {
                 Text(
                     "每日折旧总成本",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = contentColor.copy(alpha = 0.8f)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     "¥${String.format("%.2f", totalDailyCost)}",
-                    style = MaterialTheme.typography.displayLarge,
+                    style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
                     color = contentColor
                 )
                 if (averageDailyCost > 0) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         "平均 ¥${String.format("%.2f", averageDailyCost)}/设备/天",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                 }

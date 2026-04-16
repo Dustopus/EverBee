@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.apislens.ui.theme.ReminderSettings
 import com.apislens.worker.ChargeReminderWorker
 import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.TimeUnit
@@ -16,6 +17,9 @@ class ApisLensApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject
+    lateinit var reminderSettings: ReminderSettings
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -29,7 +33,7 @@ class ApisLensApp : Application(), Configuration.Provider {
 
     private fun scheduleChargeReminder() {
         val request = PeriodicWorkRequestBuilder<ChargeReminderWorker>(
-            1, TimeUnit.DAYS // 每天检查一次
+            1, TimeUnit.DAYS
         ).build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(

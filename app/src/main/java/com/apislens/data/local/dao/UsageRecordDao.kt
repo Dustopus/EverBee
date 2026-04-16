@@ -44,10 +44,10 @@ interface UsageRecordDao {
         endDate: String
     ): Int?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(record: UsageRecord): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(records: List<UsageRecord>)
 
     @Update

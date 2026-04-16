@@ -2,6 +2,7 @@ package com.apislens.ui.navigation
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
@@ -32,8 +33,8 @@ sealed class Screen(val route: String) {
     object AddDevice : Screen("add_device")
     object EditDevice : Screen("edit_device/{deviceId}")
     object AddChargeRecord : Screen("add_charge/{deviceId}")
-    object AddUsageRecord : Screen("add_usage/{deviceId}")
     object Settings : Screen("settings")
+    object DeviceNotificationSettings : Screen("device_notification_settings")
 
     fun withArgs(vararg args: Any): String = buildString {
         append(route.substringBefore("/"))
@@ -64,6 +65,7 @@ fun ApisLensNavGraph(navController: NavHostController) {
     val showBottomBar = currentDestination?.route in bottomNavRoutes
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomBar) {
                 val animatedContainerColor by animateColorAsState(
@@ -172,7 +174,6 @@ fun ApisLensNavGraph(navController: NavHostController) {
                     deviceId = deviceId,
                     onBack = { navController.popBackStack() },
                     onAddChargeRecord = { navController.navigate(Screen.AddChargeRecord.withArgs(deviceId)) },
-                    onAddUsageRecord = { navController.navigate(Screen.AddUsageRecord.withArgs(deviceId)) },
                     onEditDevice = { id -> navController.navigate(Screen.EditDevice.withArgs(id)) }
                 )
             }
@@ -204,19 +205,18 @@ fun ApisLensNavGraph(navController: NavHostController) {
                     onSaved = { navController.popBackStack() }
                 )
             }
-            composable(
-                route = Screen.AddUsageRecord.route,
-                arguments = listOf(navArgument("deviceId") { type = NavType.LongType })
-            ) { entry ->
-                val deviceId = entry.arguments?.getLong("deviceId") ?: 0L
-                AddUsageRecordScreen(
-                    deviceId = deviceId,
+            composable(Screen.Settings.route) {
+                SettingsScreen(
                     onBack = { navController.popBackStack() },
-                    onSaved = { navController.popBackStack() }
+                    onNavigateToDeviceNotificationSettings = {
+                        navController.navigate(Screen.DeviceNotificationSettings.route) {
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
-            composable(Screen.Settings.route) {
-                SettingsScreen(onBack = { navController.popBackStack() })
+            composable(Screen.DeviceNotificationSettings.route) {
+                DeviceNotificationSettingsScreen(onBack = { navController.popBackStack() })
             }
         }
     }

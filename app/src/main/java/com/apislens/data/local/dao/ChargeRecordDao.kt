@@ -29,10 +29,10 @@ interface ChargeRecordDao {
         endTime: Long
     ): Flow<List<ChargeRecord>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(record: ChargeRecord): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(records: List<ChargeRecord>)
 
     @Update
@@ -60,9 +60,9 @@ interface ChargeRecordDao {
     @Query("SELECT * FROM charge_records ORDER BY start_time DESC")
     fun getAllChargeRecords(): Flow<List<ChargeRecord>>
 
-    @Query("SELECT start_time FROM charge_records WHERE device_id = :deviceId ORDER BY start_time DESC LIMIT 1")
+    @Query("SELECT COALESCE(end_time, start_time) FROM charge_records WHERE device_id = :deviceId ORDER BY COALESCE(end_time, start_time) DESC LIMIT 1")
     suspend fun getLatestChargeTimeByDevice(deviceId: Long): Long?
 
-    @Query("SELECT start_time FROM charge_records WHERE device_id = :deviceId AND end_level IS NOT NULL AND (end_level - start_level) >= 20 ORDER BY start_time DESC LIMIT 1")
+    @Query("SELECT COALESCE(end_time, start_time) FROM charge_records WHERE device_id = :deviceId AND end_level IS NOT NULL AND (end_level - start_level) >= 20 ORDER BY COALESCE(end_time, start_time) DESC LIMIT 1")
     suspend fun getLatestValidChargeTimeByDevice(deviceId: Long): Long?
 }

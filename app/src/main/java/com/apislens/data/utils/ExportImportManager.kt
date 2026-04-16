@@ -21,26 +21,17 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * JSON 数据导入/导出处理器。
- *
- * 使用 Android 存储访问框架 (SAF) 进行文件读写，
- * 调用方通过 onActivityResult 拿到 Uri 后传入。
- */
 @Singleton
 class ExportImportManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val deviceDao: DeviceDao,
     private val chargeRecordDao: ChargeRecordDao,
-    private val usageRecordDao: UsageRecordDao
+    private val usageRecordDao: UsageRecordDao,
+    private val snowflakeIdGenerator: SnowflakeIdGenerator
 ) {
 
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 
-    /**
-     * 将全部数据导出到指定 Uri。
-     * @return 导出的设备数和记录数
-     */
     suspend fun exportTo(uri: Uri): ExportResult {
         val devices = deviceDao.getAllDevicesOnce()
         val chargeRecords = getAllChargeRecords()
@@ -67,10 +58,6 @@ class ExportImportManager @Inject constructor(
         )
     }
 
-    /**
-     * 从指定 Uri 导入数据（合并策略：新增为主，跳过冲突）。
-     * @return 导入的设备数和记录数
-     */
     suspend fun importFrom(uri: Uri): ImportResult {
         return try {
             val json = context.contentResolver.openInputStream(uri)?.use { ins ->
@@ -84,40 +71,39 @@ class ExportImportManager @Inject constructor(
             var chargeCount = 0
             var usageCount = 0
 
-            // 导入设备（智能去重：按名称+型号+购买日期匹配，匹配到则跳过）
             val idMapping = mutableMapOf<Long, Long>()
-            val existingDevices = deviceDao.getAllDevicesOnce()
 
             for (device in data.devices) {
-                val oldId = device.id
-                // 检查是否已存在相同设备
-                val duplicate = existingDevices.find { existing ->
-                    existing.name == device.name
-                        && existing.purchaseDate == device.purchaseDate
-                        && (existing.model == device.model || device.model.isEmpty())
-                }
-                if (duplicate != null) {
-                    // 已存在，复用已有 ID
-                    idMapping[oldId] = duplicate.id
+                val existingDevice = deviceDao.getDeviceOnce(device.id)
+                if (existingDevice != null) {
+                    idMapping[device.id] = existingDevice.id
                 } else {
-                    // 新设备，插入
-                    val newId = deviceDao.insert(device.copy(id = 0))
-                    idMapping[oldId] = newId
+                    val newId = IdPrefix.generateDeviceId(snowflakeIdGenerator)
+                    deviceDao.insert(device.copy(id = newId))
+                    idMapping[device.id] = newId
                     deviceCount++
                 }
             }
 
-            // 导入充电记录（更新 deviceId 映射）
             for (record in data.chargeRecords) {
+                val existingRecord = chargeRecordDao.getRecordById(record.id)
+                if (existingRecord != null) {
+                    continue
+                }
                 val newDeviceId = idMapping[record.deviceId] ?: record.deviceId
-                chargeRecordDao.insert(record.copy(id = 0, deviceId = newDeviceId))
+                val newId = IdPrefix.generateChargeId(snowflakeIdGenerator)
+                chargeRecordDao.insert(record.copy(id = newId, deviceId = newDeviceId))
                 chargeCount++
             }
 
-            // 导入使用记录
             for (record in data.usageRecords) {
+                val existingRecord = usageRecordDao.getRecordById(record.id)
+                if (existingRecord != null) {
+                    continue
+                }
                 val newDeviceId = idMapping[record.deviceId] ?: record.deviceId
-                usageRecordDao.insert(record.copy(id = 0, deviceId = newDeviceId))
+                val newId = IdPrefix.generateUsageId(snowflakeIdGenerator)
+                usageRecordDao.insert(record.copy(id = newId, deviceId = newDeviceId))
                 usageCount++
             }
 
@@ -128,7 +114,6 @@ class ExportImportManager @Inject constructor(
     }
 
     private suspend fun getAllChargeRecords(): List<ChargeRecord> {
-        // Room Flow 不能在 suspend 中直接 collect，用简单查询
         val devices = deviceDao.getAllDevicesOnce()
         return devices.flatMap { device ->
             chargeRecordDao.getRecordsByDeviceOnce(device.id)

@@ -5,6 +5,7 @@ import java.util.*
 
 object RelativeTimeFormatter {
 
+    private const val MINUTE_MS = 60000L
     private const val HOUR_MS = 3600000L
     private const val DAY_MS = 86400000L
     private const val WEEK_MS = 604800000L
@@ -17,8 +18,8 @@ object RelativeTimeFormatter {
 
         return when {
             diff < HOUR_MS -> {
-                val hours = (diff / HOUR_MS).toInt().coerceAtLeast(1)
-                "${hours}小时前"
+                val minutes = (diff / MINUTE_MS).toInt().coerceAtLeast(1)
+                "${minutes}分钟前"
             }
             diff < DAY_MS -> {
                 val hours = (diff / HOUR_MS).toInt()

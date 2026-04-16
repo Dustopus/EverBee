@@ -17,7 +17,7 @@ interface DeviceDao {
     @Query("SELECT * FROM devices WHERE id = :id")
     suspend fun getDeviceOnce(id: Long): Device?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(device: Device): Long
 
     @Update

@@ -6,7 +6,10 @@ import com.apislens.data.local.entity.ChargeRecord
 import com.apislens.data.local.entity.Device
 import com.apislens.data.repository.ChargeRecordRepository
 import com.apislens.data.repository.DeviceRepository
+import com.apislens.event.DataSyncEvent
+import com.apislens.event.DataSyncEventBus
 import com.apislens.rust.RustCore
+import com.apislens.ui.components.PieChartData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -23,65 +26,57 @@ data class DashboardStats(
     val averageDailyCost: Double = 0.0
 )
 
-data class ChargeHeatmapData(
-    val date: String,
-    val count: Int
-)
-
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val deviceRepo: DeviceRepository,
-    private val chargeRepo: ChargeRecordRepository
+    private val chargeRepo: ChargeRecordRepository,
+    private val eventBus: DataSyncEventBus
 ) : ViewModel() {
 
     private val _cachedStats = MutableStateFlow(DashboardStats())
     private val _isRefreshing = MutableStateFlow(false)
-    private val _heatmapData = MutableStateFlow<List<ChargeHeatmapData>>(emptyList())
-    private val _heatmapYear = MutableStateFlow(java.util.Calendar.getInstance().get(java.util.Calendar.YEAR))
-    private val _allChargeRecords = MutableStateFlow<List<ChargeRecord>>(emptyList())
+    private val _pieChartData = MutableStateFlow<List<PieChartData>>(emptyList())
 
     val devices = deviceRepo.getAllDevices()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val stats: StateFlow<DashboardStats> = _cachedStats.asStateFlow()
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
-    val heatmapData: StateFlow<List<ChargeHeatmapData>> = _heatmapData.asStateFlow()
-    val heatmapYear: StateFlow<Int> = _heatmapYear.asStateFlow()
+    val pieChartData: StateFlow<List<PieChartData>> = _pieChartData.asStateFlow()
 
     init {
         viewModelScope.launch {
             devices.collectLatest { deviceList ->
                 refreshStats(deviceList)
+                refreshPieChart(deviceList)
             }
         }
         viewModelScope.launch {
-            chargeRepo.getAllChargeRecords().collectLatest { records ->
-                _allChargeRecords.value = records
-                refreshHeatmap(records, _heatmapYear.value)
+            eventBus.events.collect { event ->
+                when (event) {
+                    is DataSyncEvent.ChargeRecordUpdated,
+                    is DataSyncEvent.ChargeRecordDeleted,
+                    is DataSyncEvent.ChargeRecordsChanged -> {
+                        val currentDevices = devices.value
+                        refreshStats(currentDevices)
+                    }
+                    else -> {}
+                }
             }
         }
     }
 
-    fun setHeatmapYear(year: Int) {
-        _heatmapYear.value = year
-        refreshHeatmap(_allChargeRecords.value, year)
-    }
-
-    private fun refreshHeatmap(records: List<ChargeRecord>, year: Int) {
-        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-        val cal = java.util.Calendar.getInstance()
-        val heatmap = mutableListOf<ChargeHeatmapData>()
-        for (record in records) {
-            cal.time = java.util.Date(record.startTime)
-            if (cal.get(java.util.Calendar.YEAR) == year) {
-                val dateKey = sdf.format(java.util.Date(record.startTime))
-                heatmap.add(ChargeHeatmapData(date = dateKey, count = 1))
-            }
-        }
-        val grouped = heatmap.groupBy { it.date }.map { (date, list) ->
-            ChargeHeatmapData(date = date, count = list.size)
-        }.sortedBy { it.date }
-        _heatmapData.value = grouped
+    private fun refreshPieChart(deviceList: List<Device>) {
+        _pieChartData.value = deviceList.map { device ->
+            val label = device.name.ifEmpty { device.model.ifEmpty { "未命名设备" } }
+            val purchase = device.purchasePrice
+            val depreciation = RustCore.totalDepreciation(device.purchasePriceCents, device.purchaseDate, device.lifecycleDays)
+            PieChartData(
+                label = label,
+                purchaseValue = purchase,
+                depreciationValue = depreciation
+            )
+        }.sortedByDescending { it.purchaseValue }
     }
 
     private suspend fun refreshStats(deviceList: List<Device>) {

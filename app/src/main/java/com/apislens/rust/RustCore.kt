@@ -45,17 +45,8 @@ object RustCore {
         }
     }
 
-    fun totalDepreciation(purchasePriceCents: Long, purchaseDate: String): Double {
-        return if (nativeLoaded) {
-            try {
-                nativeTotalDepreciation(purchasePriceCents, purchaseDate)
-            } catch (e: Exception) {
-                Log.w(TAG, "Rust totalDepreciation failed, fallback to Kotlin", e)
-                CostCalculator.totalDepreciation(purchasePriceCents, purchaseDate)
-            }
-        } else {
-            CostCalculator.totalDepreciation(purchasePriceCents, purchaseDate)
-        }
+    fun totalDepreciation(purchasePriceCents: Long, purchaseDate: String, lifecycleDays: Long = 1095L): Double {
+        return CostCalculator.totalDepreciation(purchasePriceCents, purchaseDate, lifecycleDays)
     }
 
     fun needsChargeReminder(lastChargeTime: Long): Boolean {

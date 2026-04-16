@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.apislens.data.local.entity.Device
 import com.apislens.data.repository.ChargeRecordRepository
 import com.apislens.data.repository.DeviceRepository
+import com.apislens.event.DataSyncEvent
+import com.apislens.event.DataSyncEventBus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -13,7 +15,8 @@ import javax.inject.Inject
 @HiltViewModel
 class DeviceListViewModel @Inject constructor(
     private val repo: DeviceRepository,
-    private val chargeRepo: ChargeRecordRepository
+    private val chargeRepo: ChargeRecordRepository,
+    private val eventBus: DataSyncEventBus
 ) : ViewModel() {
     val allDevices = repo.getAllDevices().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -47,16 +50,32 @@ class DeviceListViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             allDevices.collectLatest { deviceList ->
-                val times = mutableMapOf<Long, Long>()
-                for (device in deviceList) {
-                    try {
-                        val time = chargeRepo.getLatestChargeTimeByDevice(device.id)
-                        if (time != null) times[device.id] = time
-                    } catch (_: Exception) {}
-                }
-                _lastChargeTimes.value = times
+                refreshLastChargeTimes(deviceList)
             }
         }
+        viewModelScope.launch {
+            eventBus.events.collect { event ->
+                when (event) {
+                    is DataSyncEvent.ChargeRecordUpdated,
+                    is DataSyncEvent.ChargeRecordDeleted,
+                    is DataSyncEvent.ChargeRecordsChanged -> {
+                        refreshLastChargeTimes(allDevices.value)
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    private suspend fun refreshLastChargeTimes(deviceList: List<Device>) {
+        val times = mutableMapOf<Long, Long>()
+        for (device in deviceList) {
+            try {
+                val time = chargeRepo.getLatestChargeTimeByDevice(device.id)
+                if (time != null) times[device.id] = time
+            } catch (_: Exception) {}
+        }
+        _lastChargeTimes.value = times
     }
 
     fun toggleCategory(category: String) {
@@ -74,6 +93,10 @@ class DeviceListViewModel @Inject constructor(
     }
 
     fun deleteDevice(device: Device) {
-        viewModelScope.launch { repo.delete(device) }
+        viewModelScope.launch {
+            repo.delete(device)
+            eventBus.tryEmit(DataSyncEvent.DeviceDeleted(device.id))
+            eventBus.tryEmit(DataSyncEvent.DevicesListChanged)
+        }
     }
 }

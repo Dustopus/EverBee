@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.apislens.data.local.AppDatabase
 import com.apislens.data.local.dao.ChargeRecordDao
 import com.apislens.data.local.dao.DeviceDao
+import com.apislens.data.local.dao.DeviceNotificationSettingDao
 import com.apislens.data.local.dao.UsageRecordDao
 import dagger.Module
 import dagger.Provides
@@ -25,7 +26,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
-        .addMigrations(AppDatabase.MIGRATION_1_2)
+        .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5)
         .build()
     }
 
@@ -37,4 +38,7 @@ object DatabaseModule {
 
     @Provides
     fun provideUsageRecordDao(db: AppDatabase): UsageRecordDao = db.usageRecordDao()
+
+    @Provides
+    fun provideDeviceNotificationSettingDao(db: AppDatabase): DeviceNotificationSettingDao = db.deviceNotificationSettingDao()
 }

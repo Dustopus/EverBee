@@ -11,58 +11,63 @@ import androidx.work.WorkerParameters
 import com.apislens.R
 import com.apislens.data.local.dao.ChargeRecordDao
 import com.apislens.data.local.dao.DeviceDao
+import com.apislens.ui.theme.ReminderSettings
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
 
-/**
- * 充电提醒 Worker — 定期检查设备充电状态。
- *
- * 如果某设备超过 [CHARGE_REMIND_DAYS] 天没有充电记录，
- * 则推送通知提醒用户。
- */
 @HiltWorker
 class ChargeReminderWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
     private val deviceDao: DeviceDao,
-    private val chargeRecordDao: ChargeRecordDao
+    private val chargeRecordDao: ChargeRecordDao,
+    private val reminderSettings: ReminderSettings
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
+        val enabled = reminderSettings.isReminderEnabled()
+        if (!enabled) return Result.success()
+
+        val firstThresholdDays = reminderSettings.getFirstThresholdDays()
+        val repeatIntervalDays = reminderSettings.getRepeatIntervalDays()
+
         val devices = deviceDao.getAllDevicesOnce()
-        val threshold = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(CHARGE_REMIND_DAYS)
+        val now = System.currentTimeMillis()
 
         val devicesNeedingCharge = mutableListOf<String>()
 
         for (device in devices) {
             val records = chargeRecordDao.getRecordsByDeviceOnce(device.id)
-            if (records.isEmpty()) {
-                // 从未充过电的设备，如果购买超过阈值天数则提醒
+            val lastChargeTime: Long? = if (records.isEmpty()) {
                 try {
-                    val purchaseMillis = java.time.LocalDate.parse(device.purchaseDate)
+                    java.time.LocalDate.parse(device.purchaseDate)
                         .toEpochDay() * 86400000L
-                    if (System.currentTimeMillis() - purchaseMillis > TimeUnit.DAYS.toMillis(CHARGE_REMIND_DAYS)) {
-                        devicesNeedingCharge.add(device.name)
-                    }
-                } catch (_: Exception) {}
+                } catch (_: Exception) { null }
             } else {
-                // 检查最近一次充电是否超过阈值
-                val lastCharge = records.maxOf { it.endTime ?: it.startTime }
-                if (lastCharge < threshold) {
+                records.maxOf { it.endTime ?: it.startTime }
+            }
+
+            if (lastChargeTime == null) continue
+
+            val daysSinceLastCharge = (now - lastChargeTime) / 86_400_000L
+
+            if (daysSinceLastCharge >= firstThresholdDays) {
+                val daysAfterFirst = daysSinceLastCharge - firstThresholdDays
+                if (daysAfterFirst == 0L || daysAfterFirst % repeatIntervalDays == 0L) {
                     devicesNeedingCharge.add(device.name)
                 }
             }
         }
 
         if (devicesNeedingCharge.isNotEmpty()) {
-            showNotification(devicesNeedingCharge)
+            showNotification(devicesNeedingCharge, firstThresholdDays)
         }
 
         return Result.success()
     }
 
-    private fun showNotification(deviceNames: List<String>) {
+    private fun showNotification(deviceNames: List<String>, thresholdDays: Long) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -77,9 +82,9 @@ class ChargeReminderWorker @AssistedInject constructor(
         }
 
         val text = if (deviceNames.size == 1) {
-            "${deviceNames[0]} 已超过 $CHARGE_REMIND_DAYS 天未充电，记得充电哦 ⚡"
+            "${deviceNames[0]} 已超过 $thresholdDays 天未充电，记得充电哦 ⚡"
         } else {
-            "以下设备已超过 $CHARGE_REMIND_DAYS 天未充电：${deviceNames.joinToString("、")} ⚡"
+            "以下设备已超过 $thresholdDays 天未充电：${deviceNames.joinToString("、")} ⚡"
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
@@ -98,6 +103,5 @@ class ChargeReminderWorker @AssistedInject constructor(
         const val WORK_NAME = "charge_reminder"
         const val CHANNEL_ID = "charge_reminder_channel"
         const val NOTIFICATION_ID = 1001
-        const val CHARGE_REMIND_DAYS = 7L // 超过 7 天未充电则提醒
     }
 }
